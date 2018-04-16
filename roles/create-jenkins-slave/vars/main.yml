@@ -1,0 +1,5 @@
+#File roles/create-jenkins-slave/vars/main.yml
+node_count: 2
+ec2_tags: jenkins slave
+ec2_instance_type: t2.micro
+group_name: jenkins-slave

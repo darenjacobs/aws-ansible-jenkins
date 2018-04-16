@@ -1,0 +1,17 @@
+#File roles/deploy/tasks/deploy.yml
+- name: launch ec2 instances
+  local_action:
+    module: ec2
+    aws_access_key: "{{ aws_id }}"
+    aws_secret_key: "{{ aws_key }}"
+    region: "{{ aws_region }}"
+    image: "{{ standard_ami }}"
+    instance_type: "{{ ec2_instance_type }}"
+    key_name: "{{ ssh_keyname }}"
+    state: present
+    group_id: "{{ security_group }}"
+    vpc_subnet_id: "{{ vpc_subnet }}"
+    count: "{{ node_count }}"
+    wait: yes
+  register: ec2
+  tags: [launch,launch-instances,deploy]

@@ -1,0 +1,15 @@
+#File roles/install-jenkins-master/tasks/ssh-slaves.yml
+# This can only be done after slaves playbook has finished.
+- hosts: jenkins-master
+
+  tasks:
+  - name: Write slave instance host key to known hosts
+    shell: "ssh-keyscan -H {{ item }} >> ~/.ssh/known_hosts"
+    become: true
+    become_user: "{{ jenkins_user }}"
+    with_items: "{{ groups['jenkins-slave'] }}"
+    tags: [jenkins-master-after-slave,jenkins-ssh-slaves]
+
+  - name: restart for plugins and jobs
+    service: name=jenkins state=restarted
+    tags: [jenkins-master-after-slave,jenkins-restart]

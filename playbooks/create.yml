@@ -1,0 +1,10 @@
+#File /etc/ansible/playbooks/create.yml
+#
+# This playbook will create EC2 nodes on AWS for Jenkins installation
+# By default this will create 3 AWS nodes
+# jenkins-master-01
+# jenkins-slave-01, jenkins-slave-02
+# To modify the number of slaves, change node_count in file roles/jenkins-slave/vars/main.yml
+#
+- import_playbook: create-jenkins-master.yml
+- import_playbook: create-jenkins-slave.yml

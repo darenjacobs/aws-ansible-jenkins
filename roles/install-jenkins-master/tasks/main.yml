@@ -1,0 +1,271 @@
+#File roles/install-jenkins-master/tasks/main.yml
+
+# Install
+- name: get jenkins repo
+  get_url:
+    url: "{{ jenkins_repo }}"
+    dest: "{{ repo_dir }}/{{ jenkins_repo_file }}"
+  tags: [jenkins-master,jenkins-repo]
+
+- name: jenkins key
+  rpm_key:
+    state: present
+    key: "{{ jenkins_key }}"
+  tags: [jenkins-master,jenkins-key]
+
+- name: install jenkins
+  yum: name=jenkins state=present
+  tags: [jenkins-master,jenkins-install]
+
+- name: start jenkins
+  service: name=jenkins state=started
+  tags: [jenkins-master,jenkins-start]
+
+# Jenkins needs to run initially before making configuration changes.
+# Lowering these delays breaks the playbook
+
+- name: wait for jenkins to start
+  wait_for:
+    port: "{{ jenkins_port }}"
+    delay: 10
+  tags: [jenkins-master,jenkins-wait]
+
+- name: stop jenkins
+  service: name=jenkins state=stopped
+  tags: [jenkins-master, jenkins-stop]
+
+- name: wait for jenkins to stop
+  wait_for:
+    port: "{{ jenkins_port }}"
+    delay: 10
+    state: drained
+
+# Jenkins should be configured and stopped, so now we can make configuration changes.
+
+- name: stat old jenkins directory
+  stat:
+    path: "{{ old_jenkins_home }}"
+  register: jenkins_dir_stat
+  tags: [jenkins-master,jenkins-move]
+
+- name: stat efs mount dir
+  stat:
+    path: "{{ efs_mount_dir }}"
+  register: efs_dir_stat
+  tags: [jenkins-master,jenkins-move]
+
+- name: move jenkins directory
+  command: mv "{{ old_jenkins_home }}" "{{ jenkins_home }}"
+  when: jenkins_dir_stat.stat.exists == true and jenkins_dir_stat.stat.exists == true
+  tags: [jenkins-master,jenkins-move]
+
+- name: check if jenkins config file exist
+  stat:
+    path: "{{ jenkins_config }}"
+  register: jenkins_config_stat
+  tags: [jenkins-master,jenkins-config]
+
+- name: edit jenkins config - change jenkins home directory
+  replace:
+    path: "{{ jenkins_config }}"
+    regexp: '^JENKINS_HOME="{{ old_jenkins_home }}"'
+    replace: 'JENKINS_HOME="{{ jenkins_home }}"'
+  when: jenkins_config_stat.stat.exists == true
+  tags: [jenkins-master,jenkins-config,jenkins-home]
+
+- name: edit jenkins config - change jenkins user
+  replace:
+    path: "{{ jenkins_config }}"
+    regexp: '^JENKINS_USER="{{ old_jenkins_user }}"'
+    replace: 'JENKINS_USER="{{ jenkins_user }}"'
+  when: jenkins_config_stat.stat.exists == true
+  tags: [jenkins-master,jenkins-config,jenkins-user]
+
+- name: stat jenkins cache
+  stat: path=/var/cache/jenkins
+  register: jenkins_varcache_stat
+  tags: [jenkins-master,jenkins-cache]
+
+- name: move jenkins cache dir
+  command: mv /var/cache/jenkins "{{ jenkins_cache }}"
+  when: jenkins_varcache_stat.stat.exists == true
+  tags: [jenkins-master,jenkins-cache]
+
+- name: remove /var/cache/jenkins
+  file: path=/var/cache/jenkins state=absent
+  tags: [jenkins-master,jenkins-cache,jenkins-cache-remove]
+
+- name: create /var/cache/jenkins sym link
+  file: src="{{ jenkins_cache }}" dest=/var/cache/jenkins state=link
+  tags: [jenkins-master,jenkins-cache,jenkins-cache-move]
+
+- name: move jenkins log dir
+  command: mv "{{ jenkins_home }}/logs" "{{ jenkins_logs }}"
+  tags: [jenkins-master,jenkins-log]
+
+- name: create /efs/jenkins-app/logs sym link
+  file: src="{{ jenkins_logs }}" dest="{{ jenkins_home }}/logs" state=link
+  tags: [jenkins-master,jenkins-log,jenkins-logs-move]
+
+- name: stat var/log/jenkins
+  stat: path=/var/log/jenkins
+  register: jenkins_varlog_stat
+  tags: [jenkins-master,jenkins-log,jenkins-var-log]
+
+- name: move files from /var/log/jenkins
+  shell: mv /var/log/jenkins/* "{{ jenkins_logs }}"
+  when: jenkins_varlog_stat.stat.exists == true
+  tags: [jenkins-master,jenkins-log,jenkins-var-log]
+
+- name: remove /var/log/jenkins
+  file: path=/var/log/jenkins state=absent
+  tags: [jenkins-master,jenkins-log,jenkins-move-log]
+
+- name: create /var/log/jenkins sym link
+  file: src="{{ jenkins_logs }}" dest=/var/log/jenkins state=link
+  tags: [jenkins-master,jenkins-log,jenkins-move-log]
+
+- name: change jenkins home directory owner
+  file:
+    path: "{{ item }}"
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_user }}"
+    recurse: yes
+  with_items:
+    - "{{ jenkins_home }}"
+    - "{{ jenkins_logs }}"
+    - "{{ jenkins_cache }}"
+  tags: [jenkins-master,jenkins-permissions]
+
+- name: restart / enable jenkins
+  service: name=jenkins state=restarted enabled=yes
+  tags: [jenkins-master,jenkins-initial-restart,jenkins-enabled]
+
+- name: generate ssh key for user dvpjenkins
+  user:
+    name: dvpjenkins
+    generate_ssh_key: yes
+    ssh_key_bits: 2048
+    ssh_key_file: .ssh/id_rsa
+  tags: [jenkins-master,jenkins-sshkey]
+
+- name: Jenkins master ssh key
+  fetch:
+    src: "{{ jenkins_user_home }}/.ssh/id_rsa.pub"
+    dest: /etc/ansible/roles/install-jenkins-slave/files/authorized_keys
+    owner: ec2-user
+    flat: yes
+  tags: [jenkins-master,jenkins-sshkey-copy]
+
+- name: remove default jenkins user
+  user:
+    name: jenkins
+    state: absent
+    remove: yes
+  tags: [jenkins-master,jenkins-remove-user]
+
+# Configs
+- name: copy configs
+  template:
+    src: "{{ item }}"
+    dest: "{{ jenkins_home }}/{{ item | basename | regex_replace('\\.j2','') }}"
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_user }}"
+    mode: 0644
+  with_fileglob: "configs/*.j2"
+  tags: [jenkins-master,jenkins-configs]
+
+# Jobs
+- name: copy jobs
+  unarchive:
+    src: "{{ item }}"
+    dest: "{{ jenkins_home }}/jobs/"
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_user }}"
+  with_fileglob: 'jobs/*.tgz'
+  tags: [jenkins-master,jenkins-jobs, jenkins-job-copy]
+
+- name: fetch template from remote
+  fetch:
+    src: "{{ jenkins_home }}/jobs/{{ item | basename | regex_replace('\\.tgz','') }}/config.xml"
+    dest: "/tmp/{{ item | basename | regex_replace('\\.tgz','.j2') }}"
+    flat: yes
+  with_fileglob: "jobs/*.tgz"
+  ignore_errors: yes
+  tags: [jenkins-master,jenkins-jobs,jenkins-job-fetch]
+
+- name: Template jobs
+  template:
+    src: "/tmp/{{ item | basename | regex_replace('\\.tgz','.j2') }}"
+    dest: "{{ jenkins_home }}/jobs/{{ item | basename | regex_replace('\\.tgz','') }}/config.xml"
+  with_fileglob: "jobs/*.tgz"
+  tags: [jenkins-master,jenkins-jobs,jenkins-job-template]
+
+# Port redirect
+- name: prerouting port redirect
+  shell: "iptables -A PREROUTING -t nat -i eth0 -p tcp --dport 80 -j REDIRECT --to-port {{ jenkins_port }}"
+  become: true
+  tags: [jenkins-master,jenkins-redirect]
+
+# Port redirect
+- name: prerouting port redirect
+  shell: "iptables -A PREROUTING -t nat -i eth0 -p tcp --dport 80 -j REDIRECT --to-port {{ jenkins_port }}"
+  become: true
+  tags: [jenkins-master,jenkins-redirect]
+
+- name: port redirect
+  shell: "iptables -t nat -I OUTPUT -p tcp -o lo --dport 80 -j REDIRECT --to-ports {{ jenkins_port }}"
+  become: true
+  tags: [jenkins-master,jenkins-redirect]
+
+# Plugins
+- name: create admin file
+  get_url:
+    url: "http://{{ jenkins_url }}:{{ jenkins_port }}/login?from=%2F"
+    dest: /dev/null
+  tags: [jenkins-master,jenkins-null,jenkins-plugins]
+
+- name: redirect port 80 to 8080
+  iptables:
+    table: nat
+    chain: PREROUTING
+    in_interface: eth0
+    protocol: tcp
+    match: tcp
+    destination: 80
+    jump: REDIRECT
+    to_ports: 8080
+  become: yes
+  tags: [jenkins-master,jenkins-nat]
+
+- name: wait for admin file
+  wait_for:
+    port: "{{ jenkins_port }}"
+    delay: 120
+  tags: [jenkins-master,jenkins-plugins,jenkins-wait-again]
+
+- name: get admin password
+  shell: "cat {{ jenkins_admin_information }}"
+  register: admin_information_action
+  become: true
+  become_user: "{{ jenkins_user }}"
+  tags: [jenkins-master,jenkins-plugins,jenkins-admin]
+
+- name: install jenkins plugins
+  jenkins_plugin:
+    name: "{{ item }}"
+    url_username: "{{ jenkins_admin_username }}"
+    url_password: "{{ admin_information_action.stdout }}"
+  with_items: "{{ jenkins_plugins }}"
+  ignore_errors: yes
+  tags: [jenkins-master,jenkins-plugins,jenkins-plugins-install]
+
+- name: restart for config changes
+  service: name=jenkins state=restarted
+  tags: [jenkins-master,jenkins-restart]
+
+- name: wait for config changes
+  wait_for:
+    port: "{{ jenkins_port }}"
+    delay: 180
+  tags: [jenkins-master,jenkins-wait-more]

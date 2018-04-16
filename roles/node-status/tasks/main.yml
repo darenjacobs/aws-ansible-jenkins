@@ -1,0 +1,29 @@
+#File: roles/node-status/tasks/main.yml
+#Found out the hard way its good to run this go get the variables set.
+- name: Waiting for port 22
+  local_action: wait_for port=22 delay=10 host="{{ ansible_ssh_host }}"
+  tags: [wait-for-it,configure]
+
+- name: test connection
+  ping:
+  tags: [ping,configure]
+
+- name: output ansible hostname
+  debug: msg="ansible_hostname = {{ ansible_hostname }}"
+  tags: test
+
+- name: output inventory short name
+  debug: msg="inventory_hostname_short = {{ inventory_hostname_short }}"
+  tags: test
+
+- name: ansible distribution
+  debug: msg="Ansible distribution = {{ ansible_distribution }}"
+  tags: test
+
+- name: output inventory fqdn
+  debug: msg="inventory_hostmame = {{ inventory_hostname }}"
+  tags: test
+
+- name: output default ip4 address
+  debug: msg="ansible_default_ip4v.address= {{ ansible_default_ipv4.address }}"
+  tags: test

@@ -1,0 +1,24 @@
+#File roles/bootstrap/tasks/efs-mount.yml
+- name: efs directory
+  file: path="{{ efs_mount_dir }}" state=directory
+  tags: [bootstrap,efs-dir]
+
+- name: install nfs-utils
+  yum: name=nfs-utils state=present
+  tags: [bootstrap,nfs-utils]
+
+- name: get current availability zone (az) from aws
+  uri:
+    url: http://169.254.169.254/latest/meta-data/placement/availability-zone
+    return_content: yes
+  register: aws_current_az
+  tags: [bootstrap,efs-zone]
+
+- name: mount efs
+  mount:
+    name: "{{ efs_mount_dir }}"
+    src: "{{ aws_current_az.content }}.{{ efs_file_system_id }}.efs.{{ aws_region }}.amazonaws.com:/"
+    fstype: nfs4
+    opts: nfsvers=4.1
+    state: mounted
+  tags: [bootstrap,efs-mount]

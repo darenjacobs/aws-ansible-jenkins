@@ -1,0 +1,30 @@
+#File roles/deploy/tasks/append-hosts.yml
+- name: add group to ansible hosts file
+  local_action:
+    module: lineinfile
+    dest: /etc/ansible/hosts
+    regexp: "^{{ group_name }}"
+    #line: "{{'\n'}}[{{ group_name }}]"
+    line: "[{{ group_name }}]"
+    create: yes
+  tags: [create,ansible-group]
+
+- name: add private ip to ansible hosts file
+  local_action:
+    module: lineinfile
+    dest: /etc/ansible/hosts
+    line: "{% for instance in ec2.instances %}{{ group_name }}-0{{ loop.index }} ansible_ssh_host={{ instance.private_ip }}{{'\n'}}{% endfor %}"
+    create: yes
+  tags: [create,ansible-hosts]
+
+- name: add ec2 instance to inventory
+  local_action: add_host hostname={{ item.public_ip }} groupname={{ group_name }}
+  with_items: "{{ ec2.instances }}"
+
+- name: add private ip to etc host file
+  local_action:
+    module: lineinfile
+    dest: /etc/hosts
+    regexp: '.*{{ inventory_hostname_short }}$'
+    line: "{% for instance in ec2.instances %}{{ instance.private_ip }} {{ group_name  }}-0{{ loop.index }}{{'\n'}}{% endfor %}"
+  tags: [create,etc-hosts]

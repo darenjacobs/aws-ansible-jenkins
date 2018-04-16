@@ -1,0 +1,5 @@
+#File roles/bootstrap/handlers/main.yml
+#
+# Restart ntpd when the configuration changes
+- name: restart ntpd
+  service: name=ntpd state=restarted

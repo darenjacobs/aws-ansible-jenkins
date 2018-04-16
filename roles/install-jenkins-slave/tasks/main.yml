@@ -1,0 +1,36 @@
+#File roles/install-jenkins-slave/tasks/main.yml
+- name: make jenkins slave directory
+  file: path="{{ jenkins_slave_home }}" state=directory owner="{{ jenkins_user }}" group="{{ jenkins_user }}" mode=0750
+  tags: [jenkins-slave,jenkins_home]
+
+- name: download slave.jar
+  get_url:
+    url: "{{ jenkins_url }}:{{ jenkins_port }}/jnlpJars/slave.jar"
+    dest: "{{ jenkins_user_home }}/slave.jar"
+    owner: "{{ jenkins_user }}"
+    mode: 0700
+  tags: [jenkins-slave,jenkins-file]
+
+- name: make ssh directory
+  file: path="{{ jenkins_user_home}}/.ssh" state=directory mode=0700 owner="{{ jenkins_user }}"
+  tags: [jenkins-slave,jenkins-sshdir]
+
+- name: Get ssh key
+  copy:
+    src: authorized_keys
+    dest: "{{ jenkins_user_home }}/.ssh/authorized_keys"
+    owner: "{{ jenkins_user }}"
+  tags: [jenkins-slave,jenkins-sshkey]
+
+- name: make node directory
+  file: path="{{ jenkins_home }}/nodes/{{ inventory_hostname_short }}" state=directory owner="{{ jenkins_user }}" group="{{ jenkins_user }}"
+  tags: [jenkins-slave,jenkins-slave-node]
+
+- name: configure slave node
+  template:
+    src: config.xml.j2
+    dest: "{{ jenkins_home }}/nodes/{{ inventory_hostname_short }}/config.xml"
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_user }}"
+    mode: 0644
+  tags: [jenkins-slave,jenkins-slave-node]

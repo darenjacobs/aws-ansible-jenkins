@@ -1,0 +1,5 @@
+#File roles/deploy/tasks/main.yml
+- import_tasks: create.yml
+- import_tasks: append-to-hosts.yml
+- import_tasks: tag-instances.yml
+- import_tasks: efs.yml

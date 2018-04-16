@@ -1,0 +1,38 @@
+#File roles/create/tasks/efs.yml
+# Note ran the following on the ansible server: sudo pip install boto3 --ignore-installed
+- name: create efs volume
+  efs:
+    aws_access_key: "{{ aws_id }}"
+    aws_secret_key: "{{ aws_key }}"
+    region: "{{ aws_region }}"
+    state: present
+    name: "{{ efs_name }}"
+    tags:
+      name: "{{ efs_tag }}"
+    targets:
+      - subnet_id: "{{ vpc_subnet }}"
+        security_groups: ["{{ security_group }}"]
+  register: efs
+  tags: [create,efs]
+
+# Despite registering efs (above), using efs.0.file_system to edit the group_vars/all file gives an error. using efs facts to be safe. debug is for; well why not?
+- name: efs facts
+  efs_facts:
+    name: "{{ efs_name }}"
+    region: "{{ aws_region }}"
+  register: efs_facts
+  tags: [create,efs,efs-facts]
+
+- name: display *same* efs info
+  debug:
+    msg:
+      - "{{ efs_facts.ansible_facts.efs.0.file_system_id }}"
+      - "{{ efs.0.file_system_id }}"
+  tags: [create,efs,efs-facts,efs-info]
+
+- name: set efs file_system_id as var
+  replace:
+    path: /etc/ansible/group_vars/all
+    regexp: '^efs_file_system_id:(\s+.*)?$'
+    replace: 'efs_file_system_id: {{ efs_facts.ansible_facts.efs.0.file_system_id }}'
+  tags: [create,efs,efs-facts,efs-id]

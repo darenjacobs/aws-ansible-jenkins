@@ -1,0 +1,5 @@
+#File roles/install-jenkins-slave/vars/main.yml
+# efs mount var in group_vars
+jenkins_slave_home: "{{ efs_mount_dir }}/{{ inventory_hostname_short }}"
+jenkins_slave_ssh_port: 22
+jenkins_slave_executors: 2

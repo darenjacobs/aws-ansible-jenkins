@@ -1,0 +1,26 @@
+#File roles/bootstrap/tasks/jenkins-stuff.yml
+- name: create jenkins user
+  user:
+    name: dvpjenkins
+    uid: 1001
+    append: yes
+    shell: /bin/bash
+  tags: [bootstrap,jenkins-user,dvpjenkins]
+
+- name: install java
+  yum: name=java-1.8.0-openjdk state=present
+  tags: [bootstrap,apps,java]
+
+- name: install git
+  yum: name=git state=present
+  tags: [bootstrap,apps,git]
+
+- name: get maven repo
+  get_url:
+    url: "{{ maven_repo }}"
+    dest: "{{ repo_dir }}/{{ maven_repo_file }}"
+  tags: [bootstrap,apps,maven-repo]
+
+- name: install maven
+  yum: name=apache-maven state=present
+  tags: [bootstrap,apps,maven-install]

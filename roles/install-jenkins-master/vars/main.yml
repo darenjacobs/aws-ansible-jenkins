@@ -1,0 +1,29 @@
+#File roles/install-jenkins-master/vars/main.yml
+# efs mount var in group_vars
+jenkins_admin_information: "{{ jenkins_home }}/secrets/initialAdminPassword"
+jenkins_admin_username: admin
+jenkins_cache: "{{ efs_mount_dir }}/jenkins-cache"
+jenkins_config: /etc/sysconfig/jenkins
+jenkins_key: http://pkg.jenkins.io/redhat-stable/jenkins.io.key
+jenkins_logs: "{{ efs_mount_dir }}/jenkins-logs"
+jenkins_repo: https://pkg.jenkins.io/redhat/jenkins.repo
+jenkins_repo_file: jenkins.repo
+old_jenkins_home: /var/lib/jenkins
+old_jenkins_user: jenkins
+remote: "{{ github_url }}/jenkins-shared-library.git"
+jenkins_plugins:
+  - active-directory
+  - ansible
+  - artifactory
+  - bitbucket
+  - blueocean
+  - checkstyle
+  - command-launcher
+  - ec2-fleet
+  - junit
+  - selenium
+  - ssh-agent
+  - ssh-slaves
+  - subversion
+  - timestamper
+  - versionnumber

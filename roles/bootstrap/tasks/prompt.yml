@@ -1,0 +1,20 @@
+#File roles/bootstrap/tasks/prompt.yml
+- name: check for bashrc backup
+  stat: path=/home/ec2-user/.bashrc.bak
+  register: bashrc_stat
+  tags: [boostrap,prompt]
+
+- name: backup existing bashrc file
+  command: mv /home/ec2-user/.{{ item }} /home/ec2-user/.{{ item }}.bak
+  when: bashrc_stat.stat.exists == false
+  with_items:
+    - bashrc
+    - bash_profile
+  tags: [boostrap,prompt]
+
+- name: use my prompt
+  copy: src={{ item }} dest=/home/ec2-user/.{{ item }} owner=ec2-user group=ec2-user mode=600
+  with_items:
+    - bashrc
+    - bash_profile
+  tags: [boostrap,prompt]

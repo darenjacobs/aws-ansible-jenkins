@@ -1,0 +1,17 @@
+#File roles/bootstrap/tasks/selinux.yml
+- name: install ansible requirements
+  yum:
+    name: libselinux-python, bind, bind-utils
+    state: present
+  tags: [bootstrap,selinux]
+
+- name: change selinux to permissive
+  selinux:
+    policy=targeted
+    state=permissive
+  tags: [bootstrap,selinux]
+
+- name: immediately apply selinux changes
+  command: /usr/sbin/setenforce 0
+  ignore_errors: yes
+  tags: [bootstrap,selinux]

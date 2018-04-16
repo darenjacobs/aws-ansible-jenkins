@@ -1,0 +1,7 @@
+- name: Deploy Jenkins Master
+  hosts: 127.0.0.1
+  vars_files:
+  - /etc/ansible/vault/vault.yml
+  roles:
+    - create
+    - create-jenkins-master

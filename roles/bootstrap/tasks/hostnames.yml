@@ -1,0 +1,19 @@
+#File roles/bootstrap/tasks/hostname.yml
+- name: update /etc/hosts on remote notes
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '.*{{ hostvars[item].inventory_hostname_short }}$'
+    line: '{{ hostvars[item].ansible_default_ipv4.address }} {{ hostvars[item].inventory_hostname_short }}'
+    state: present
+  with_items: "{{ groups.all }}"
+  tags: [bootstrap,hostname]
+
+- name: change hostname
+  shell: hostnamectl set-hostname {{ inventory_hostname_short }}
+  when: ansible_distribution == 'RedHat'
+  tags: [bootstrap,hostname,sethost]
+
+- name: immediately apply hostname changes
+  shell: hostname {{ inventory_hostname_short }}
+  when: ansible_distribution == 'RedHat'
+  tags: [bootstrap,hostname,sethost]

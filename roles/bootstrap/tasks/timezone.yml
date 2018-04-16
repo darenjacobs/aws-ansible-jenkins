@@ -1,0 +1,28 @@
+#File roles/bootstrap/tasks/timezone.yml
+- name: install ntp and tzdata
+  yum: name=ntp,tzdata
+  tags: [bootstrap,settime,tz,timezone]
+
+- name: check for localtime backup
+  stat: path=/etc/localtime.bak
+  register: localtime_stat
+  tags: [bootstrap,settime,tz,timezone]
+
+- name: backup existing localtime file
+  command: mv /etc/localtime /etc/localtime.bak
+  when: localtime_stat.stat.exists == false
+  tags: [bootstrap,settime,tz,timezone]
+
+- name: create symbolic link to timezone file
+  file: src=/usr/share/zoneinfo/{{ timezone }} dest=/etc/localtime owner=root group=root state=link
+  tags: [bootstrap,settime,tz,timezone]
+
+- name: enable ntpd
+  service: name=ntpd state=restarted enabled=yes
+  tags: [bootstrap,settime,tz,timezone]
+
+- name: replace ntp config file
+  copy: src=ntp.conf dest=/etc/ntp.conf owner=root group=root mode=644 backup=yes
+  notify:
+    - restart ntpd
+  tags: [bootstrap,settime,tz,timezone]

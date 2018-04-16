@@ -1,0 +1,16 @@
+#File group_vars/all
+# Global vars
+efs_file_system_id: false
+efs_mount_dir: /efs
+efs_name: jenkinsEFS
+efs_tag: jenkinsEFS
+jenkins_home: "{{ efs_mount_dir }}/jenkins-app"
+jenkins_port: 8080
+jenkins_url: http://jenkins-master-01
+jenkins_user: dvpjenkins
+jenkins_user_home: "/home/{{ jenkins_user }}"
+maven_repo: http://repos.fedorapeople.org/repos/dchen/apache-maven/epel-apache-maven.repo
+maven_repo_file: epel-apache-maven.repo
+repo_dir: /etc/yum.repos.d
+start_index: 1
+timezone: EST

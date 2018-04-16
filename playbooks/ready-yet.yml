@@ -1,0 +1,10 @@
+#File playbooks/ready-yet.yml
+
+# Check to see of the nodes have spun up.  Run this after deploy.yml completes successfully
+
+- name: Check if nodes are up
+  hosts: all
+  vars_files:
+  - /etc/ansible/vault/vault.yml
+  roles:
+    - node-status

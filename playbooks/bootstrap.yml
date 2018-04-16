@@ -1,0 +1,10 @@
+#File playbooks/ready-yet.yml
+
+# Check to see of the nodes have spun up.  Run this after deploy.yml completes successfully
+
+- name: Actions for both Jenkins master and slaves
+  hosts: all
+  vars_files:
+  - /etc/ansible/vault/vault.yml
+  roles:
+    - bootstrap

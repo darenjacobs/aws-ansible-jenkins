@@ -1,0 +1,5 @@
+#File roles/create-jenkins-master/vars/main.yml
+node_count: 1
+ec2_tags: jenkins master
+ec2_instance_type: t2.micro
+group_name: jenkins-master

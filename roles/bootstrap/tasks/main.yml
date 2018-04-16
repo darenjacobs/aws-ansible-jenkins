@@ -1,0 +1,8 @@
+#File roles/bootstrap/tasks/main.yml
+# boostrap has tasks common to both jenkins master and slave
+- import_tasks: selinux.yml
+- import_tasks: timezone.yml
+- import_tasks: hostnames.yml
+- import_tasks: efs-mount.yml
+- import_tasks: jenkins-stuff.yml
+- import_tasks: prompt.yml

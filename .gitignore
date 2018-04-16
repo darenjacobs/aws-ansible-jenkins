@@ -1,0 +1,4 @@
+hosts
+authorized_keys
+vault.yml
+*.retry

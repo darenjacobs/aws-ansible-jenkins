@@ -1,0 +1,8 @@
+#File playbooks/install-jenkins-master.yml
+
+- name: Actions for both Jenkins master and slaves
+  hosts: jenkins-master
+  vars_files:
+  - /etc/ansible/vault/vault.yml
+  roles:
+    - install-jenkins-master
