@@ -207,12 +207,6 @@
   become: true
   tags: [jenkins-master,jenkins-redirect]
 
-# Port redirect
-- name: prerouting port redirect
-  shell: "iptables -A PREROUTING -t nat -i eth0 -p tcp --dport 80 -j REDIRECT --to-port {{ jenkins_port }}"
-  become: true
-  tags: [jenkins-master,jenkins-redirect]
-
 - name: port redirect
   shell: "iptables -t nat -I OUTPUT -p tcp -o lo --dport 80 -j REDIRECT --to-ports {{ jenkins_port }}"
   become: true
